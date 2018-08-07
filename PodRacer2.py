@@ -66,7 +66,7 @@ class Pod(object):
         self.dist = sqrt(self.xerror**2 + self.yerror**2)
         self.velocity = sqrt(self.x_vel**2 + self.y_vel**2)
 
-        if self.x_vel == 0:
+        if self.xerror == 0:
             theta = 0
         else:
             theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
@@ -109,7 +109,8 @@ class Pod(object):
             self.vel_ang = 90
         elif self.x_vel == 0 and self.y_vel < 0:
             self.vel_ang = 270
-        print("vel_angle={},cp_ang={},x_vel={},y_vel={},xer={},yer={}".format(self.vel_ang,self.cp_ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
+        print("vel_angle={},cp_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(self.vel_ang,self.cp_ang,self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
+
     def control(self):
         # if theta_v - theta_cp > 0 rotate left
         # if theta_v - theta_cp < 0 rotate right
@@ -117,23 +118,27 @@ class Pod(object):
         if self.delta_theta > 180:
             self.delta_theta = -(360-self.delta_theta)
         elif self.delta_theta < -180:
-            self.delta_theta = -(360 + self.delta_theta)
+            self.delta_theta = (360 + self.delta_theta)
         self.k1 = .8
-        ang = abs(math.ceil(self.delta_theta * self.k1))
+        ang_vel = math.ceil(self.delta_theta * self.k1)
+
+        self.delta_orient = self.ang - self.cp_ang
+        if self.delta_orient > 180:
+            self.delta_orient = -(360-self.delta_orient)
+        elif self.delta_orient < -180:
+            self.delta_orient = (360 + self.delta_orient)
+        ang_orient = math.ceil(self.delta_orient * self.k1)
+
+        ang = .5*ang_vel + .5*ang_orient
         if ang > 18:
             ang = 18
-        elif ang < 0:
-            ang = 0
+        elif ang < -18:
+            ang = -18
 
-        if self.delta_theta > 0:
-            x_rot = self.x_vel*math.cos(ang) - self.y_vel*math.sin(ang)
-            y_rot = self.x_vel*math.sin(ang) + self.y_vel*math.cos(ang)
-        elif self.delta_theta < 0:
-            x_rot = self.x_vel*math.cos(-ang) - self.y_vel*math.sin(-ang)
-            y_rot = self.x_vel*math.sin(-ang) + self.y_vel*math.cos(-ang)
-        else:
-            x_rot = 0
-            y_rot = 0
+
+        x_rot = self.x_vel*math.cos(ang) - self.y_vel*math.sin(ang)
+        y_rot = self.x_vel*math.sin(ang) + self.y_vel*math.cos(ang)
+
 
         if self.turn_num > 2:
             target_x = math.ceil(self.x + x_rot)
@@ -142,7 +147,7 @@ class Pod(object):
             target_x = self.nextcpx
             target_y = self.nextcpy
             self.turn_num+=1
-        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\n".format(self.delta_theta,x_rot,y_rot,target_x,target_y,ang) ,file=sys.stderr)
+        print("delta_theta={},delta_orient={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,self.delta_orient,x_rot,y_rot,target_x,target_y,ang,self.dist) ,file=sys.stderr)
         return target_x,target_y
 
     def thrust(self):
