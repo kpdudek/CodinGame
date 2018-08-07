@@ -69,8 +69,8 @@ class Pod(object):
         if self.x_vel == 0:
             theta = 0
         else:
-            theta = math.degrees(math.atan(self.yerror/self.xerror))
-
+            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
+        print("cp theta={}".format(theta) ,file=sys.stderr)
         if self.xerror > 0 and self.yerror < 0:
             self.cp_ang = 360-theta
         elif self.xerror > 0 and self.yerror > 0:
@@ -91,8 +91,8 @@ class Pod(object):
         if self.x_vel == 0:
             theta = 0
         else:
-            theta = math.degrees(math.atan(self.y_vel/self.x_vel))
-
+            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
+        print("vel theta = {}".format(theta) ,file=sys.stderr)
         if self.x_vel > 0 and self.y_vel < 0:
             self.vel_ang = 360-theta
         elif self.x_vel > 0 and self.y_vel > 0:
@@ -109,36 +109,53 @@ class Pod(object):
             self.vel_ang = 90
         elif self.x_vel == 0 and self.y_vel < 0:
             self.vel_ang = 270
-
+        print("vel_angle={},cp_ang={},x_vel={},y_vel={},xer={},yer={}".format(self.vel_ang,self.cp_ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
     def control(self):
         # if theta_v - theta_cp > 0 rotate left
         # if theta_v - theta_cp < 0 rotate right
-        delta_theta = self.vel_ang - self.cp_ang
-        self.k1 = .5
-        ang = math.ceil(delta_theta * self.k1)
+        self.delta_theta = self.vel_ang - self.cp_ang
+        if self.delta_theta > 180:
+            self.delta_theta = -(360-self.delta_theta)
+        elif self.delta_theta < -180:
+            self.delta_theta = -(360 + self.delta_theta)
+        self.k1 = .8
+        ang = abs(math.ceil(self.delta_theta * self.k1))
         if ang > 18:
             ang = 18
         elif ang < 0:
             ang = 0
 
-        if delta_theta > 0:
+        if self.delta_theta > 0:
             x_rot = self.x_vel*math.cos(ang) - self.y_vel*math.sin(ang)
             y_rot = self.x_vel*math.sin(ang) + self.y_vel*math.cos(ang)
-        elif delta_theta < 0:
+        elif self.delta_theta < 0:
             x_rot = self.x_vel*math.cos(-ang) - self.y_vel*math.sin(-ang)
             y_rot = self.x_vel*math.sin(-ang) + self.y_vel*math.cos(-ang)
         else:
             x_rot = 0
             y_rot = 0
 
-        if self.turn_num > 1:
+        if self.turn_num > 2:
             target_x = math.ceil(self.x + x_rot)
             target_y = math.ceil(self.y + y_rot)
         else:
-            target_x = self.x
-            target_y = self.y
-        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={}\n".format(delta_theta,x_rot,y_rot,target_x,target_y) ,file=sys.stderr)
+            target_x = self.nextcpx
+            target_y = self.nextcpy
+            self.turn_num+=1
+        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\n".format(self.delta_theta,x_rot,y_rot,target_x,target_y,ang) ,file=sys.stderr)
         return target_x,target_y
+
+    def thrust(self):
+        angle = abs(self.delta_theta)
+        thrust = (100-(.55*angle))
+        if self.dist > 2300:
+            thrust = 100
+        if thrust > 100:
+            thrust = 100
+        elif thrust < 0:
+            thrust = 0
+        thrust = math.ceil(thrust)
+        return thrust
 
 
 
@@ -155,19 +172,20 @@ while True:
     o2_x, o2_y, o2_vx, o2_vy, o2_angle, o2_next_check_point_id = [int(j) for j in input().split()]
 
     pod1.prep(x,y,vx,vy,angle,next_check_point_id)
-    pod1.count_turn()
+    pod1.cp_params()
     pod1.angles()
     x,y = pod1.control()
-
-    #print("<< POD1 >>\ntx1 = {} ty1 = {} nextcpx = {} nextcpy = {} dist = {}\nang = {} vel = {}\n".format(tx1,ty1,pod1.next_cp_x,pod1.next_cp_y,pod1.dist,pod1.cp_ang,pod1.vel) ,file=sys.stderr)
-    print(str(x),str(y),str(100))
+    t = pod1.thrust()
+    pod1.count_turn()
+    print(str(x),str(y),str(t))
 
 
 
 
     pod2.prep(x2,y2,vx2,vy2,angle2,next_check_point_id2)
-    pod2.count_turn()
+    pod2.cp_params()
     pod2.angles()
     x2,y2 = pod2.control()
-    #print("<< POD2 >>\ntx2 = {} ty2 = {} nextcpx = {} nextcpy = {} dist = {}\nang = {} vel = {}\n".format(tx2,ty2,pod2.next_cp_x,pod2.next_cp_y,pod2.dist,pod2.cp_ang,pod2.vel) ,file=sys.stderr)
-    print(str(x2),str(y2),str(100))
+    t2 = pod2.thrust()
+    pod2.count_turn()
+    print(str(x2),str(y2),str(t2))
