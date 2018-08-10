@@ -135,30 +135,40 @@ class Pod(object):
         elif ang < -18:
             ang = -18
 
-
-        x_rot = self.x_vel*math.cos(ang) - self.y_vel*math.sin(ang)
-        y_rot = self.x_vel*math.sin(ang) + self.y_vel*math.cos(ang)
-
-
+        ang = -ang
         if self.turn_num > 2:
+            # We need the unit vector of v to be multiplied by 400 that way the target x and y still provide ample room for
+            # acceleration if the velocity is below
+            e_x = self.xerror / self.dist
+            e_y = self.yerror / self.dist
+            Re_x = 4000 * e_x
+            Re_y = 4000 * e_y
+            x_rot = Re_x*math.cos(ang) + Re_y*math.sin(ang)
+            y_rot = -Re_x*math.sin(ang) + Re_y*math.cos(ang)
+
             target_x = math.ceil(self.x + x_rot)
             target_y = math.ceil(self.y + y_rot)
+
         else:
             target_x = self.nextcpx
             target_y = self.nextcpy
+            x_rot = 0
+            y_rot = 0
             self.turn_num+=1
         print("delta_theta={},delta_orient={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,self.delta_orient,x_rot,y_rot,target_x,target_y,ang,self.dist) ,file=sys.stderr)
         return target_x,target_y
 
     def thrust(self):
-        angle = abs(self.delta_theta)
-        thrust = (100-(.55*angle))
+        angle = abs(self.delta_theta+self.delta_orient)
+        thrust = (100-(2*angle))
         if self.dist > 2300:
             thrust = 100
         if thrust > 100:
             thrust = 100
         elif thrust < 0:
             thrust = 0
+        if self.velocity < 10:
+            thrust = 100
         thrust = math.ceil(thrust)
         return thrust
 
