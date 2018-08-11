@@ -135,7 +135,7 @@ class Pod(object):
         elif ang < -18:
             ang = -18
 
-        ang = -ang
+        ang = ang
         if self.turn_num > 2:
             # We need the unit vector of v to be multiplied by 400 that way the target x and y still provide ample room for
             # acceleration if the velocity is below
@@ -159,17 +159,21 @@ class Pod(object):
         return target_x,target_y
 
     def thrust(self):
-        angle = abs(self.delta_theta+self.delta_orient)
-        thrust = (100-(2*angle))
-        if self.dist > 2300:
-            thrust = 100
+        angle = abs(self.delta_theta)
+        thrust = (100-(1.8*angle))
+        # if self.dist > 2300:
+        #     thrust = 100
         if thrust > 100:
             thrust = 100
         elif thrust < 0:
             thrust = 0
+
+        #Encorporate this into the function
         if self.velocity < 10:
             thrust = 100
+
         thrust = math.ceil(thrust)
+        print("thrust = {}", .format(thrust),file=sys.stderr)
         return thrust
 
 
