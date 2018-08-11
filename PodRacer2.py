@@ -135,6 +135,18 @@ class Pod(object):
         # Print the result of angles()
         print("vel_angle={},cp_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(math.degrees(self.vel_ang),math.degrees(self.cp_ang),self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
 
+    def adjust_cp(self):
+        l = len(chk_pts)-1
+        if (self.dist < 1500) and (abs(self.vel_ang) < 25) and (self.velocity > 225):
+            if self.cp_id == l:
+                self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,0)
+                self.cp_params()
+                self.angles()
+            else:
+                self.cp_id += 1
+                self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
+                self.cp_params()
+                self.angles()
     def control(self):
         pi = math.pi
         po2 = math.pi/2
@@ -182,13 +194,27 @@ class Pod(object):
     def thrust(self):
         angle = math.degrees(abs(self.delta_theta))
         thrust = (.002623*(angle-180)**2+30)
-        # if self.dist > 2300:
-        #     thrust = 100
         if thrust > 100:
             thrust = 100
         elif thrust < 0:
             thrust = 0
 
+        # Specify a distance to start decelerating
+        dist = 3500
+        t1 = .7 # Tuning parameter for distance contribution to thrust
+        alpha = (35 - 100) / (-(dist**2))
+        if self.dist < dist:
+            thrust_dist = (-alpha)*(self.dist-dist)**2 + 100
+            thrust_dist = (t1*thrust_dist)/100
+        else:
+            thrust_dist = 1.6
+
+        thrust = thrust * thrust_dist
+
+        if thrust > 100:
+            thrust = 100
+        elif thrust < 0:
+            thrust = 0
         #Encorporate this into the function
         if self.velocity < 10:
             thrust = 100
@@ -217,6 +243,7 @@ while True:
     pod1.prep(x,y,vx,vy,angle,next_check_point_id)
     pod1.cp_params()
     pod1.angles()
+    pod1.adjust_cp()
     x,y = pod1.control()
     pod1.thrust()
     pod1.boost()
@@ -229,6 +256,7 @@ while True:
     pod2.prep(x2,y2,vx2,vy2,angle2,next_check_point_id2)
     pod2.cp_params()
     pod2.angles()
+    pod2.adjust_cp()
     x2,y2 = pod2.control()
     pod2.thrust()
     pod2.count_turn()
