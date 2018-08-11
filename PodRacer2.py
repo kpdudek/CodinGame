@@ -64,6 +64,10 @@ class Pod(object):
         self.turn_num += 1
 
     def angles(self):
+        pi = math.pi
+        po2 = math.pi/2
+        tpo2 = (3*math.pi)/2
+        tpi = 2*math.pi
         # Calculate the unit vectors of euclidian distance
         self.xerror = self.nextcpx - self.x
         self.yerror = self.nextcpy - self.y
@@ -74,110 +78,110 @@ class Pod(object):
 
                     ### Global Euclidian Distance Vector ###
         if self.xerror < 0 and self.yerror == 0:
-            self.cp_ang = 180
+            self.cp_ang = pi
         elif self.xerror > 0 and self.yerror == 0:
             self.cp_ang = 0
         elif self.xerror == 0 and self.yerror > 0:
-            self.cp_ang = 90
+            self.cp_ang = po2
         elif self.xerror == 0 and self.yerror < 0:
-            self.cp_ang = 270
+            self.cp_ang = tpo2
         elif self.xerror > 0 and self.yerror < 0:
-            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
-            print("cp theta={}".format(theta) ,file=sys.stderr)
-            self.cp_ang = 360-theta
+            theta = math.atan(abs(self.yerror)/abs(self.xerror))
+            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            self.cp_ang = tpi - theta
         elif self.xerror > 0 and self.yerror > 0:
-            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
-            print("cp theta={}".format(theta) ,file=sys.stderr)
+            theta = math.atan(abs(self.yerror)/abs(self.xerror))
+            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
             self.cp_ang = theta
         elif self.xerror < 0 and self.yerror < 0:
-            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
-            print("cp theta={}".format(theta) ,file=sys.stderr)
-            self.cp_ang = 180 + theta
+            theta = math.atan(abs(self.yerror)/abs(self.xerror))
+            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            self.cp_ang = pi + theta
         elif self.xerror < 0 and self.yerror > 0:
-            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
-            print("cp theta={}".format(theta) ,file=sys.stderr)
-            self.cp_ang = 180 - theta
+            theta = math.atan(abs(self.yerror)/abs(self.xerror))
+            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            self.cp_ang = pi - theta
         else:
-            print("Oh Fuck:line 96",file=sys.stderr)
+            print("You missed a condition in the Euclidian Distance, Pod.Angles()",file=sys.stderr)
 
                         ###   GLobal Velocity Angle   ###
         if self.x_vel < 0 and self.y_vel == 0:
-            self.vel_ang = 180
+            self.vel_ang = pi
         elif self.x_vel > 0 and self.y_vel == 0:
             self.vel_ang = 0
         elif self.x_vel == 0 and self.y_vel > 0:
-            self.vel_ang = 90
+            self.vel_ang = po2
         elif self.x_vel == 0 and self.y_vel < 0:
-            self.vel_ang = 270
+            self.vel_ang = tpo2
         elif self.x_vel > 0 and self.y_vel < 0:
-            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
-            print("vel theta = {}".format(theta) ,file=sys.stderr)
-            self.vel_ang = 360-theta
+            theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
+            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            self.vel_ang = tpi - theta
         elif self.x_vel > 0 and self.y_vel > 0:
-            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
-            print("vel theta = {}".format(theta) ,file=sys.stderr)
+            theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
+            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
             self.vel_ang = theta
         elif self.x_vel < 0 and self.y_vel < 0:
-            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
-            print("vel theta = {}".format(theta) ,file=sys.stderr)
-            self.vel_ang = 180 + theta
+            theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
+            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            self.vel_ang = pi + theta
         elif self.x_vel < 0 and self.y_vel > 0:
-            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
-            print("vel theta = {}".format(theta) ,file=sys.stderr)
-            self.vel_ang = 180 - theta
+            theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
+            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            self.vel_ang = pi - theta
+        else:
+            print("You missed a condition in the Global Velocity, Pod.Angles()",file=sys.stderr)
 
         # Print the result of angles()
-        print("vel_angle={},cp_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(self.vel_ang,self.cp_ang,self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
+        print("vel_angle={},cp_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(math.degrees(self.vel_ang),math.degrees(self.cp_ang),self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
 
     def control(self):
+        pi = math.pi
+        po2 = math.pi/2
+        tpo2 = (3*math.pi)/2
+        tpi = 2*math.pi
+        eightn = math.radians(18)
         # if theta_v - theta_cp > 0 rotate left
         # if theta_v - theta_cp < 0 rotate right
-        self.delta_theta = self.vel_ang - self.cp_ang
-        if self.delta_theta > 180:
-            self.delta_theta = (360-self.delta_theta)
-        elif self.delta_theta < -180:
-            self.delta_theta = -(360 + self.delta_theta)
-        self.k1 = .33
-        ang_vel = math.ceil(self.delta_theta * self.k1)
+        self.delta_theta = (self.vel_ang - self.cp_ang)
+        if self.delta_theta > pi:
+            ang = -(tpi-self.delta_theta)
+        elif self.delta_theta < -pi:
+            ang = (tpi + self.delta_theta)
+        else:
+            ang = self.delta_theta
 
-        # # if
-        # self.delta_orient = self.ang - self.cp_ang
-        # if self.delta_orient > 180:
-        #     self.delta_orient = -(360-self.delta_orient)
-        # elif self.delta_orient < -180:
-        #     self.delta_orient = (360 + self.delta_orient)
-        # ang_orient = math.ceil(self.delta_orient * self.k1)
+        if ang > eightn:
+            ang = eightn
+        elif ang < -eightn:
+            ang = -eightn
 
-        ang = ang_vel # .5*ang_vel + .5*ang_orient
-        if ang > 18:
-            ang = 18
-        elif ang < -18:
-            ang = -18
         if self.turn_num > 2:
             # We need the unit vector of v to be multiplied by 400 that way the target x and y still provide ample room for
             # acceleration if the velocity is below
             e_x = self.xerror / self.dist
             e_y = self.yerror / self.dist
-            Re_x = 4000 * e_x
-            Re_y = 4000 * e_y
+            Re_x = e_x #4000 * e_x
+            Re_y = e_y #4000 * e_y
+
             x_rot = Re_x*math.cos(ang) + Re_y*math.sin(ang)
             y_rot = -Re_x*math.sin(ang) + Re_y*math.cos(ang)
-
-            target_x = math.ceil(self.x + x_rot)
-            target_y = math.ceil(self.y + y_rot)
+            target_x = math.ceil(self.x + (4000*x_rot))
+            target_y = math.ceil(self.y + (4000*y_rot))
 
         else:
             target_x = self.nextcpx
             target_y = self.nextcpy
             x_rot = 0
             y_rot = 0
-            self.turn_num+=1
-        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,x_rot,y_rot,target_x,target_y,ang,self.dist) ,file=sys.stderr)
+
+
+        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,x_rot,y_rot,target_x,target_y,math.degrees(ang),self.dist) ,file=sys.stderr)
         return target_x,target_y
 
     def thrust(self):
-        angle = abs(self.delta_theta)
-        thrust = .0167*angle + 100.503
+        angle = math.degrees(abs(self.delta_theta))
+        thrust = (.002623*(angle-180)**2+30)
         # if self.dist > 2300:
         #     thrust = 100
         if thrust > 100:
@@ -189,10 +193,13 @@ class Pod(object):
         if self.velocity < 10:
             thrust = 100
 
-        thrust = math.ceil(thrust)
+        self.t = str(math.ceil(thrust))
         print("thrust = {}".format(thrust),file=sys.stderr)
-        return thrust
+        #return thrust
 
+    def boost(self):
+        if self.turn_num < 2:
+            self.t = "BOOST"
 
 
 
@@ -211,9 +218,10 @@ while True:
     pod1.cp_params()
     pod1.angles()
     x,y = pod1.control()
-    t = pod1.thrust()
+    pod1.thrust()
+    pod1.boost()
     pod1.count_turn()
-    print(str(x),str(y),str(t))
+    print(str(x),str(y),pod1.t)
 
 
 
@@ -222,6 +230,6 @@ while True:
     pod2.cp_params()
     pod2.angles()
     x2,y2 = pod2.control()
-    t2 = pod2.thrust()
+    pod2.thrust()
     pod2.count_turn()
-    print(str(x2),str(y2),str(t2))
+    print(str(x2),str(y2),pod2.t)
