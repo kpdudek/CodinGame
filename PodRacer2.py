@@ -46,40 +46,34 @@ class Pod(object):
         self.vel_ang = 0
 
     def prep(self,xpose,ypose,x_v,y_v,ang,next_check_id):
-        self.x = xpose
-        self.y = ypose
-        self.x_vel = x_v
-        self.y_vel = y_v
-        self.ang = ang
-        self.cp_id = next_check_id
+        # Store the turn by turn values into respective class properties
+        self.x = xpose # X position of pod
+        self.y = ypose # Y position of pod
+        self.x_vel = x_v # Velocity in x direction
+        self.y_vel = y_v # Velocity in y direction
+        self.ang = ang # Global angle of pod
+        self.cp_id = next_check_id # Index of current checkpoint
 
     def cp_params(self):
+        # Store the current checkpoint coordinates by indexing
+        # into the list of every checkpoint
         self.nextcpx,self.nextcpy = chk_pts[self.cp_id]
 
     def count_turn(self):
+        # Count what turn it is
         self.turn_num += 1
 
     def angles(self):
+        # Calculate the unit vectors of euclidian distance
         self.xerror = self.nextcpx - self.x
         self.yerror = self.nextcpy - self.y
 
+        # Calculate euclidian distance and velocity
         self.dist = sqrt(self.xerror**2 + self.yerror**2)
         self.velocity = sqrt(self.x_vel**2 + self.y_vel**2)
 
-        if self.xerror == 0:
-            theta = 0
-        else:
-            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
-        print("cp theta={}".format(theta) ,file=sys.stderr)
-        if self.xerror > 0 and self.yerror < 0:
-            self.cp_ang = 360-theta
-        elif self.xerror > 0 and self.yerror > 0:
-            self.cp_ang = theta
-        elif self.xerror < 0 and self.yerror < 0:
-            self.cp_ang = 180 + theta
-        elif self.xerror < 0 and self.yerror > 0:
-            self.cp_ang = 180 - theta
-        elif self.xerror < 0 and self.yerror == 0:
+                    ### Global Euclidian Distance Vector ###
+        if self.xerror < 0 and self.yerror == 0:
             self.cp_ang = 180
         elif self.xerror > 0 and self.yerror == 0:
             self.cp_ang = 0
@@ -87,21 +81,27 @@ class Pod(object):
             self.cp_ang = 90
         elif self.xerror == 0 and self.yerror < 0:
             self.cp_ang = 270
-
-        if self.x_vel == 0:
-            theta = 0
+        elif self.xerror > 0 and self.yerror < 0:
+            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
+            print("cp theta={}".format(theta) ,file=sys.stderr)
+            self.cp_ang = 360-theta
+        elif self.xerror > 0 and self.yerror > 0:
+            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
+            print("cp theta={}".format(theta) ,file=sys.stderr)
+            self.cp_ang = theta
+        elif self.xerror < 0 and self.yerror < 0:
+            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
+            print("cp theta={}".format(theta) ,file=sys.stderr)
+            self.cp_ang = 180 + theta
+        elif self.xerror < 0 and self.yerror > 0:
+            theta = abs(math.degrees(math.atan(abs(self.yerror)/abs(self.xerror))))
+            print("cp theta={}".format(theta) ,file=sys.stderr)
+            self.cp_ang = 180 - theta
         else:
-            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
-        print("vel theta = {}".format(theta) ,file=sys.stderr)
-        if self.x_vel > 0 and self.y_vel < 0:
-            self.vel_ang = 360-theta
-        elif self.x_vel > 0 and self.y_vel > 0:
-            self.vel_ang = theta
-        elif self.x_vel < 0 and self.y_vel < 0:
-            self.vel_ang = 180 + theta
-        elif self.x_vel < 0 and self.y_vel > 0:
-            self.vel_ang = 180 - theta
-        elif self.x_vel < 0 and self.y_vel == 0:
+            print("Oh Fuck:line 96",file=sys.stderr)
+
+                        ###   GLobal Velocity Angle   ###
+        if self.x_vel < 0 and self.y_vel == 0:
             self.vel_ang = 180
         elif self.x_vel > 0 and self.y_vel == 0:
             self.vel_ang = 0
@@ -109,6 +109,24 @@ class Pod(object):
             self.vel_ang = 90
         elif self.x_vel == 0 and self.y_vel < 0:
             self.vel_ang = 270
+        elif self.x_vel > 0 and self.y_vel < 0:
+            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
+            print("vel theta = {}".format(theta) ,file=sys.stderr)
+            self.vel_ang = 360-theta
+        elif self.x_vel > 0 and self.y_vel > 0:
+            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
+            print("vel theta = {}".format(theta) ,file=sys.stderr)
+            self.vel_ang = theta
+        elif self.x_vel < 0 and self.y_vel < 0:
+            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
+            print("vel theta = {}".format(theta) ,file=sys.stderr)
+            self.vel_ang = 180 + theta
+        elif self.x_vel < 0 and self.y_vel > 0:
+            theta = abs(math.degrees(math.atan(abs(self.y_vel)/abs(self.x_vel))))
+            print("vel theta = {}".format(theta) ,file=sys.stderr)
+            self.vel_ang = 180 - theta
+
+        # Print the result of angles()
         print("vel_angle={},cp_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(self.vel_ang,self.cp_ang,self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
 
     def control(self):
@@ -116,26 +134,25 @@ class Pod(object):
         # if theta_v - theta_cp < 0 rotate right
         self.delta_theta = self.vel_ang - self.cp_ang
         if self.delta_theta > 180:
-            self.delta_theta = -(360-self.delta_theta)
+            self.delta_theta = (360-self.delta_theta)
         elif self.delta_theta < -180:
-            self.delta_theta = (360 + self.delta_theta)
-        self.k1 = .8
+            self.delta_theta = -(360 + self.delta_theta)
+        self.k1 = .33
         ang_vel = math.ceil(self.delta_theta * self.k1)
 
-        self.delta_orient = self.ang - self.cp_ang
-        if self.delta_orient > 180:
-            self.delta_orient = -(360-self.delta_orient)
-        elif self.delta_orient < -180:
-            self.delta_orient = (360 + self.delta_orient)
-        ang_orient = math.ceil(self.delta_orient * self.k1)
+        # # if
+        # self.delta_orient = self.ang - self.cp_ang
+        # if self.delta_orient > 180:
+        #     self.delta_orient = -(360-self.delta_orient)
+        # elif self.delta_orient < -180:
+        #     self.delta_orient = (360 + self.delta_orient)
+        # ang_orient = math.ceil(self.delta_orient * self.k1)
 
-        ang = .5*ang_vel + .5*ang_orient
+        ang = ang_vel # .5*ang_vel + .5*ang_orient
         if ang > 18:
             ang = 18
         elif ang < -18:
             ang = -18
-
-        ang = ang
         if self.turn_num > 2:
             # We need the unit vector of v to be multiplied by 400 that way the target x and y still provide ample room for
             # acceleration if the velocity is below
@@ -155,12 +172,12 @@ class Pod(object):
             x_rot = 0
             y_rot = 0
             self.turn_num+=1
-        print("delta_theta={},delta_orient={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,self.delta_orient,x_rot,y_rot,target_x,target_y,ang,self.dist) ,file=sys.stderr)
+        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,x_rot,y_rot,target_x,target_y,ang,self.dist) ,file=sys.stderr)
         return target_x,target_y
 
     def thrust(self):
         angle = abs(self.delta_theta)
-        thrust = (100-(1.8*angle))
+        thrust = .0167*angle + 100.503
         # if self.dist > 2300:
         #     thrust = 100
         if thrust > 100:
@@ -173,7 +190,7 @@ class Pod(object):
             thrust = 100
 
         thrust = math.ceil(thrust)
-        print("thrust = {}", .format(thrust),file=sys.stderr)
+        print("thrust = {}".format(thrust),file=sys.stderr)
         return thrust
 
 
