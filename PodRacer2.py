@@ -28,7 +28,7 @@ class Pod(object):
         self.y_vel = 0 # Velocity in the y direction
         self.ang = 0 # Orientation of the pod
         self.cp_id = 0 # Current checkpoint index
-        self.last_cp_id = 0 # Store the checkpoint id from the last turn
+        self.last_cp_id = 1 # Store the checkpoint id from the last turn
 
         # Race Standing Values
         self.turn_num = 0 # Current turn number
@@ -52,6 +52,9 @@ class Pod(object):
         self.goal_ang = 0 # Global angle of goal pose vector
         self.vel_ang = 0 # Global angle of velocity vector
 
+    '''
+    LOW LEVEL :: METHODS
+    '''
     ### LOW LEVEL ###
     def prep(self,xpose,ypose,x_v,y_v,ang,next_check_id):
         # Store the turn by turn values into respective class properties
@@ -67,24 +70,36 @@ class Pod(object):
         if self.cp_id != self.last_cp_id:
             self.chkpts_complete += 1
         self.last_cp_id = self.cp_id
-
         return self.chkpts_complete
 
-    ### RACE ###
-    def cp_params(self):
-        # Store the current checkpoint coordinates by indexing
-        # into the list of every checkpoint
-        self.nextcpx,self.nextcpy = chk_pts[self.cp_id]
+    ### LOW LEVEL ###
+    # Determine the race standing of the pod by comparing the number of
+    # checkpoints it has completed versus the number of checkpoints completed
+    # by the other
+    def determine_position(self,pod1,pod2):
+        if pod1 > pod2: # if pod1 is in lead
+            self.position = 1
+        elif pod1 < pod2: # if pod2 is in lead
+            self.position = 2
+        else: # if both pods are going to the same cp
+            self.position = 1
+        return self.position
 
     ### LOW LEVEL ###
-    def count_turn(self):
-        # Count what turn it is
-        self.turn_num += 1
+    # Based on the pods race position, set it race tactic
+    # TACTICS: race
+    #          block
+    def set_role(self):
+        if self.position == 1:
+            self.role = "race"
+        else:
+            self.role = "block"
+        return self.role
 
     ### LOW LEVEL ###
-    def update_goal(self):
-        self.goalx = self.nextcpx
-        self.goaly = self.nextcpy
+    def update_goal(self,x,y):
+        self.goalx = x
+        self.goaly = y
 
     ### LOW LEVEL ###
     def angles(self):
@@ -102,7 +117,7 @@ class Pod(object):
         self.dist = sqrt(self.xerror**2 + self.yerror**2)
         self.velocity = sqrt(self.x_vel**2 + self.y_vel**2)
 
-                    ### Global Euclidian Distance Vector ###
+        ######### Global Euclidian Distance Vector #########
         if self.xerror < 0 and self.yerror == 0:
             self.goal_ang = pi
         elif self.xerror > 0 and self.yerror == 0:
@@ -130,7 +145,7 @@ class Pod(object):
         else:
             print("You missed a condition in the Euclidian Distance, Pod.Angles()",file=sys.stderr)
 
-                        ###   GLobal Velocity Angle   ###
+        #########   GLobal Velocity Angle   #########
         if self.x_vel < 0 and self.y_vel == 0:
             self.vel_ang = pi
         elif self.x_vel > 0 and self.y_vel == 0:
@@ -161,26 +176,6 @@ class Pod(object):
         # Print the result of angles()
         print("vel_angle={},goal_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(math.degrees(self.vel_ang),math.degrees(self.goal_ang),self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
 
-    ### RACE ###
-    def adjust_cp(self):
-        # This function decides if the pod can start navigating to the next checkpoint
-        # while still passing through the current assigned goal
-
-        l = len(chk_pts)-1 # Number of checkpoints
-        # If the pod will pass though the checkpoint, switch to the next checkpoint
-        if (self.dist < 1500) and (abs(self.vel_ang) < 25) and (self.velocity > 225):
-            if self.cp_id == l: # if the current checkpoint is the last in the list, target index 0
-                self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,0)
-                self.cp_params()
-                self.update_goal()
-                self.angles()
-            else: # Target index += 1
-                self.cp_id += 1
-                self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
-                self.cp_params()
-                self.update_goal()
-                self.angles()
-
     ### LOW LEVEL ###
     def control(self):
         # Store radian values for convenience
@@ -201,7 +196,6 @@ class Pod(object):
             ang = (tpi + self.delta_theta)
         else:
             ang = self.delta_theta
-
         # Limit the rotation to 18 degrees
         if ang > eightn:
             ang = eightn
@@ -274,41 +268,96 @@ class Pod(object):
         self.t = str(math.ceil(thrust))
         print("thrust = {}".format(thrust),file=sys.stderr)
 
+    ### LOW LEVEL ###
+    def count_turn(self):
+        # Count what turn it is
+        self.turn_num += 1
+
+
+    '''
+    ROLE --> RACE :: METHODS
+    '''
     ### RACE ###
     # Decide to set the boost flag
     def boost(self):
         # Boost on first turn
-        if self.turn_num == 0 :
+        if self.turn_num < 2 :
             self.t = "BOOST"
 
-    ### LOW LEVEL ###
-    # Determine the race standing of the pod by comparing the number of
-    # checkpoints it has completed versus the number of checkpoints completed
-    # by the other
-    def determine_position(self,pod1,pod2):
-        if pod1 > pod2:
-            self.position = 1
-        else:
-            self.position = 2
-        return self.position
+    ### RACE ###
+    def adjust_cp(self):
+        # This function decides if the pod can start navigating to the next checkpoint
+        # while still passing through the current assigned goal
+
+        l = len(chk_pts)-1 # Number of checkpoints
+        # If the pod will pass though the checkpoint, switch to the next checkpoint
+        if (self.dist < 1500) and (abs(self.vel_ang) < 25) and (self.velocity > 225):
+            print("Switching to next CP...",file=sys.stderr)
+            if self.cp_id == l: # if the current checkpoint is the last in the list, target index 0
+                self.cp_id = 0
+                self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
+            else: # Target index += 1
+                self.cp_id += 1
+                self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
+
+    ### RACE ###
+    def cp_params(self):
+        # Store the current checkpoint coordinates by indexing
+        # into the list of every checkpoint
+        self.nextcpx,self.nextcpy = chk_pts[self.cp_id]
+        return self.nextcpx, self.nextcpy
+
+
+    '''
+    ROLE --> BLOCK :: METHODS
+    '''
+    def determine_opponent_leader(self):
+        x = 0
+
+
+######################   -  GAME LOOP FUNCTIONS   -  ######################
+def block(pod):
+    #This function is prefixed by the function calls:
+    #   prep()
+    #   completed_checkpoints()
+    #   determine_position()
+    #   set_role()
+    pod.determine_opponent_leader()
+    x,y = pod.cp_params()
 
     ### LOW LEVEL ###
-    # Based on the pods race position, set it race tactic
-    # TACTICS: race
-    #          block
-    def set_role(self):
-        if self.position == 1:
-            self.role = "race"
-        else:
-            self.role = "block"
+    pod.update_goal(x,y)
+    pod.angles()
+    x,y = pod.control()
+    pod.thrust()
+    pod.count_turn()
+    return x,y
 
-        return self.role
+def race(pod):
+    #This function is prefixed by the function calls:
+    #   prep()
+    #   completed_checkpoints()
+    #   determine_position()
+    #   set_role()
+    x,y = pod.cp_params()
+    pod.update_goal(x,y)
+    pod.angles()
+    pod.adjust_cp()
+    x,y = pod.cp_params()
+
+    ### LOW LEVEL ###
+    pod.update_goal(x,y)
+    pod.angles()
+    x,y = pod.control()
+    pod.thrust()
+    pod.count_turn()
+    return x,y
 
 
-                    ######   POD INITIALIZATION   ######
+######################   -  POD INITIALIZATION   -  ######################
 pod1 = Pod()
 pod2 = Pod()
-                        ######   Game Loop   ######
+######################   -  Game Loop   -  ######################
 while True:
     #Sets the turn values of checkpoint postition and current attitude
     x, y, vx, vy, angle, next_check_point_id = [int(j) for j in input().split()]
@@ -322,11 +371,14 @@ while True:
     chkpts1 = pod1.completed_checkpoints()
     pod2.prep(x2,y2,vx2,vy2,angle2,next_check_point_id2)
     chkpts2 = pod2.completed_checkpoints()
+    print("chkpts1 = {}, chkpts2 = {}".format(chkpts1,chkpts2), file=sys.stderr)
 
     # If both pods are on the first checkpoint, both race
     if (chkpts1 < 1) and (chkpts2 < 1):
-        pod1.cp_params()
-        pod1.update_goal()
+        print("Both on chkpt 1...", file=sys.stderr)
+
+        cpx,cpy = pod1.cp_params()
+        pod1.update_goal(cpx,cpy)
         pod1.angles()
         pod1.adjust_cp()
         x,y = pod1.control()
@@ -334,39 +386,31 @@ while True:
         pod1.boost()
         pod1.count_turn()
 
-        pod2.cp_params()
-        pod2.update_goal()
+        cpx2,cpy2 = pod2.cp_params()
+        pod2.update_goal(cpx2,cpy2)
         pod2.angles()
         pod2.adjust_cp()
         x2,y2 = pod2.control()
         pod2.thrust()
         pod2.count_turn()
 
-    # Now determine block or race, off of who is the leader
+    # Now determine block or race: based on which pod is the leader
     # TODO(add some logic so that the pods dont get stuck flipping states)
     else:
+        print("Deciding Race/Block...", file=sys.stderr)
+
         posit1 = pod1.determine_position(chkpts1,chkpts2)
         posit2 = pod2.determine_position(chkpts2,chkpts1)
         role1 = pod1.set_role()
         role2 = pod2.set_role()
+        print("pod1 = {}\npod2 = {}".format(role1,role2), file=sys.stderr)
 
-        pod1.cp_params()
-        pod1.update_goal()
-        pod1.angles()
-        pod1.adjust_cp()
-        x,y = pod1.control()
-        pod1.thrust()
-        pod1.boost()
-        pod1.count_turn()
-
-        pod2.cp_params()
-        pod2.update_goal()
-        pod2.angles()
-        pod2.adjust_cp()
-        x2,y2 = pod2.control()
-        pod2.thrust()
-        pod2.count_turn()
-
+        if role1 == "race":
+            x,y = race(pod1)
+            x2,y2 = block(pod2)
+        else:
+            x,y = block(pod1)
+            x2,y2 = race(pod2)
 
     # Target Coordinates and thrust values of the pods
     print(str(x),str(y),pod1.t)
