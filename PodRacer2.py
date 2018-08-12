@@ -86,7 +86,7 @@ class Pod(object):
         return self.position
 
     ### LOW LEVEL ###
-    # Based on the pods race position, set it race tactic
+    # Based on the pods race position, set the race tactic
     # TACTICS: race
     #          block
     def set_role(self):
@@ -95,6 +95,13 @@ class Pod(object):
         else:
             self.role = "block"
         return self.role
+
+    ### LOW LEVEL ###
+    def cp_params(self):
+        # Store the current checkpoint coordinates by indexing
+        # into the list of every checkpoint
+        self.nextcpx,self.nextcpy = chk_pts[self.cp_id]
+        return self.nextcpx, self.nextcpy
 
     ### LOW LEVEL ###
     def update_goal(self,x,y):
@@ -300,38 +307,55 @@ class Pod(object):
                 self.cp_id += 1
                 self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
 
-    ### RACE ###
-    def cp_params(self):
-        # Store the current checkpoint coordinates by indexing
-        # into the list of every checkpoint
-        self.nextcpx,self.nextcpy = chk_pts[self.cp_id]
-        return self.nextcpx, self.nextcpy
-
 
     '''
     ROLE --> BLOCK :: METHODS
     '''
-    def determine_opponent_leader(self):
-        x = 0
+    # This function takes the
+    def determine_opponent_leader(self,op1,op2):
+        # This function
+        if op1.chkpts_complete > op2.chkpts_complete:
+            return op1.cp_id
+        elif op2.chkpts_complete > op1.chkpts_complete:
+            return op2.cp_id
+        else:
+            return op1.cp_id
+
+    def wait_or_advance(self,op):
+        x,y = chk_pts[op.cp_id]
+        x1,y1 = chk_pts[self.cp_id]
+        op_dist = op.dist + sqrt((x1-x)**2 + (y1-y)**2)
+        if op_dist > self.dist:
+            return self.cp_id 
+        elif op_dist < self.dist
+
 
 
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
-def block(pod):
+#x,y,vx,vy,angle,next_check_point_id,x2,y2,vx2,vy2,angle2,next_check_point_id2
+def block(pod,op1,op2):
     #This function is prefixed by the function calls:
     #   prep()
     #   completed_checkpoints()
     #   determine_position()
     #   set_role()
-    pod.determine_opponent_leader()
+    id = pod.determine_opponent_leader(op1,op2)
+    pod.cp_id = id + 1 # Make sure you account for being at the end of the cp list
     x,y = pod.cp_params()
+    pod.update_goal()
+    pod.angles()
+
+    pod.wait_or_advance(op)
+    # Function Check distance to cp_id+=1 versus op.dist+dist(cp_id,cp_id+1)
+    # Incentivice waiting on the next cp if you're sufficiently ahead
 
     ### LOW LEVEL ###
     pod.update_goal(x,y)
     pod.angles()
-    x,y = pod.control()
+    xf,yf = pod.control()
     pod.thrust()
     pod.count_turn()
-    return x,y
+    return xf,yf
 
 def race(pod):
     #This function is prefixed by the function calls:
@@ -348,15 +372,17 @@ def race(pod):
     ### LOW LEVEL ###
     pod.update_goal(x,y)
     pod.angles()
-    x,y = pod.control()
+    xf,yf = pod.control()
     pod.thrust()
     pod.count_turn()
-    return x,y
+    return xf,yf
 
 
 ######################   -  POD INITIALIZATION   -  ######################
 pod1 = Pod()
 pod2 = Pod()
+op1 = Pod()
+op2 = Pod()
 ######################   -  Game Loop   -  ######################
 while True:
     #Sets the turn values of checkpoint postition and current attitude
@@ -364,6 +390,20 @@ while True:
     x2, y2, vx2, vy2, angle2, next_check_point_id2 = [int(j) for j in input().split()]
     o_x, o_y, o_vx, o_vy, o_angle, o_next_check_point_id = [int(j) for j in input().split()]
     o2_x, o2_y, o2_vx, o2_vy, o2_angle, o2_next_check_point_id = [int(j) for j in input().split()]
+
+    # Initialize the opponents
+    op1.prep(x,y,vx,vy,angle,next_check_point_id)
+    op2.prep(x2,y2,vx2,vy2,angle2,next_check_point_id2)
+    op1cp = op1.completed_checkpoints()
+    op2cp = op2.completed_checkpoints()
+    op1cpx,op1cpy = op1.cp_params()
+    op2cpx,op2cpy = op2.cp_params()
+    op1.update_goal(op1cpx,op1cpy)
+    op2.update_goal(op2cpx,op2cpy)
+    op1.angles()
+    op2.angles()
+    op1.count_turn()
+    op2.count_turn()
 
     # Pass turn into to the pods and determine how many checkpoints have
     # been completed
@@ -407,9 +447,9 @@ while True:
 
         if role1 == "race":
             x,y = race(pod1)
-            x2,y2 = block(pod2)
+            x2,y2 = block(pod2,op1,op2)
         else:
-            x,y = block(pod1)
+            x,y = block(pod1,op1,op2)
             x2,y2 = race(pod2)
 
     # Target Coordinates and thrust values of the pods
