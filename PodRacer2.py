@@ -287,13 +287,20 @@ class Pod(object):
     def update_cp_id(self,val):
         l = len(chk_pts)-1
         newcp = (self.cp_id+val)
-        diff = abs(newcp)
         if newcp > l:
+            diff = newcp - l
             self.cp_id = 0 + diff
         elif newcp < 0:
+            diff = abs(newcp)
             self.cp_id = len(chk_pts) - diff
         else:
             self.cp_id = newcp
+
+    def get_state(self):
+        x,y = self.cp_params()
+        self.update_goal(x,y)
+        self.angles()
+        return x,y
 
 
     '''
@@ -326,24 +333,38 @@ class Pod(object):
     '''
     ROLE --> BLOCK :: METHODS
     '''
-    # This function takes the
+    # This function takes the given opponent handles and determines their positions
     def determine_opponent_leader(self,op1,op2):
         # This function
         if op1.chkpts_complete > op2.chkpts_complete:
-            return op1.cp_id
+            self.block_id = op1.cp_id
+            self.op_dist = op1.dist
         elif op2.chkpts_complete > op1.chkpts_complete:
-            return op2.cp_id
+            self.block_id = op2.cp_id
+            self.op_dist = op2.dist
         else:
-            return op1.cp_id
+            self.block_id = op1.cp_id
+            if op1.dist > op2.dist:
+                self.op_dist = op2.dist
+            elif op2.dist > op1.dist:
+                self.op_dist = op1.dist
+            else:
+                self.op_dist = op1.dist
 
-    def wait_or_advance(self,op):
-        diff = (op.cp_id - self.cp_id)
-        if diff > 2:
-            self.update_cp_id(4)
-        if (diff > 0) and (diff <= 2):
-            
+    def loiter(self):
+        x = 1
+        # wait for race pod to be losing
 
+    def intercept(self):
+        self.cp_id = self.block_id
+        self.get_state()
 
+        if self.op_dist == self.dist:
+            self.update_cp_id(1)
+            self.get_state()
+        elif self.op_dist < self.dist:
+            self.update_cp_id(1)
+            self.get_state()
 
 
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
@@ -363,17 +384,10 @@ def block(pod,op1,op2):
     #   completed_checkpoints()
     #   determine_position()
     #   set_role()
-    id = pod.determine_opponent_leader(op1,op2)
-    update_cp_id(pod,1) # Make sure you account for being at the end of the cp list
-    get_state(pod)
-
-    # pod.wait_or_advance(op)
-    # Function Check distance to cp_id+=1 versus op.dist+dist(cp_id,cp_id+1)
-    # Incentivice waiting on the next cp if you're sufficiently ahead
+    pod.determine_opponent_leader(op1,op2)
+    pod.intercept()
 
     ### LOW LEVEL ###
-    pod.update_goal(x,y)
-    pod.angles()
     xf,yf = pod.control()
     pod.thrust()
     pod.count_turn()
