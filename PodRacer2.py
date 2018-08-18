@@ -83,9 +83,9 @@ class Pod(object):
             self.position = 2
         elif self.chkpts_complete == pod2.chkpts_complete:
             if self.dist > pod2.dist:
-                self.position = 1
-            elif self.dist < pod2.dist:
                 self.position = 2
+            elif self.dist < pod2.dist:
+                self.position = 1
             elif self.dist == pod2.dist:
                 self.position = 1
 
@@ -139,19 +139,19 @@ class Pod(object):
             self.goal_ang = tpo2
         elif self.xerror > 0 and self.yerror < 0:
             theta = math.atan(abs(self.yerror)/abs(self.xerror))
-            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
             self.goal_ang = tpi - theta
         elif self.xerror > 0 and self.yerror > 0:
             theta = math.atan(abs(self.yerror)/abs(self.xerror))
-            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
             self.goal_ang = theta
         elif self.xerror < 0 and self.yerror < 0:
             theta = math.atan(abs(self.yerror)/abs(self.xerror))
-            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
             self.goal_ang = pi + theta
         elif self.xerror < 0 and self.yerror > 0:
             theta = math.atan(abs(self.yerror)/abs(self.xerror))
-            print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("cp theta={}".format(math.degrees(theta)) ,file=sys.stderr)
             self.goal_ang = pi - theta
         else:
             print("You missed a condition in the Euclidian Distance, Pod.Angles()",file=sys.stderr)
@@ -167,25 +167,25 @@ class Pod(object):
             self.vel_ang = tpo2
         elif self.x_vel > 0 and self.y_vel < 0:
             theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
-            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
             self.vel_ang = tpi - theta
         elif self.x_vel > 0 and self.y_vel > 0:
             theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
-            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
             self.vel_ang = theta
         elif self.x_vel < 0 and self.y_vel < 0:
             theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
-            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
             self.vel_ang = pi + theta
         elif self.x_vel < 0 and self.y_vel > 0:
             theta = math.atan(abs(self.y_vel)/abs(self.x_vel))
-            print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
+            #print("vel theta = {}".format(math.degrees(theta)) ,file=sys.stderr)
             self.vel_ang = pi - theta
         else:
             print("You missed a condition in the Global Velocity, Pod.Angles()",file=sys.stderr)
 
         # Print the result of angles()
-        print("vel_angle={},goal_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(math.degrees(self.vel_ang),math.degrees(self.goal_ang),self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
+        #print("vel_angle={},goal_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(math.degrees(self.vel_ang),math.degrees(self.goal_ang),self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
 
     ### LOW LEVEL ###
     def control(self):
@@ -235,7 +235,9 @@ class Pod(object):
             y_rot = 0 # needed to prevent error stream error
 
         # Print turn values
-        print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,x_rot,y_rot,target_x,target_y,math.degrees(ang),self.dist) ,file=sys.stderr)
+        #print("delta_theta={},x_rot={},y_rot={},target_x={},target_y={},ang={}\ndist={}".format(self.delta_theta,x_rot,y_rot,target_x,target_y,math.degrees(ang),self.dist) ,file=sys.stderr)
+
+        #Function return: Coordinates that the pod will navigate to
         return target_x,target_y
 
     ### LOW LEVEL ###
@@ -257,14 +259,14 @@ class Pod(object):
 
         ###   DISTANCE WEIGHTING   ###
         dist = 3500 # Specify a distance to start decelerating
-        t1 = .7 # Tuning parameter for distance contribution to thrust
+        t1 = .9 # Tuning parameter for distance contribution to thrust
         alpha = (35 - 100) / (-(dist**2))
-        if self.dist < dist:
+        if self.dist < dist: # Solve the inverse parabolic function for thrust as a function of distance to cp
             thrust_dist = (-alpha)*(self.dist-dist)**2 + 100
             # Condition the thrust value so it can weight the angle_thrust value
             thrust_dist = (t1*thrust_dist)/100
         else:
-            thrust_dist = 1.6 # If you're not in the accelerating range, increase the thrust
+            thrust_dist = 1.6 # If you're not in the deccelerating range, increase the thrust
 
         # CALCULATE THE WEIGHTED THRUST VALUE
         # 0 < thrust_dist < 1
@@ -277,7 +279,7 @@ class Pod(object):
 
         # Set thrust attribute as the calculated result
         self.t = str(math.ceil(thrust))
-        print("thrust = {}".format(thrust),file=sys.stderr)
+        #print("thrust = {}".format(thrust),file=sys.stderr)
 
     ### LOW LEVEL ###
     def count_turn(self):
@@ -292,7 +294,7 @@ class Pod(object):
             self.cp_id = 0 + diff
         elif newcp < 0:
             diff = abs(newcp)
-            self.cp_id = len(chk_pts) - diff
+            self.cp_id = l - diff
         else:
             self.cp_id = newcp
 
@@ -321,7 +323,7 @@ class Pod(object):
         l = len(chk_pts)-1 # Number of checkpoints
         # If the pod will pass though the checkpoint, switch to the next checkpoint
         if (self.dist < 1500) and (abs(self.vel_ang) < 25) and (self.velocity > 225):
-            print("Switching to next CP...",file=sys.stderr)
+            #print("Switching to next CP...",file=sys.stderr)
             if self.cp_id == l: # if the current checkpoint is the last in the list, target index 0
                 self.cp_id = 0
                 self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
@@ -336,12 +338,16 @@ class Pod(object):
     # This function takes the given opponent handles and determines their positions
     def determine_opponent_leader(self,op1,op2):
         # This function
-        if op1.chkpts_complete > op2.chkpts_complete:
+        if op1.position ==1:
             self.block_id = op1.cp_id
             self.op_dist = op1.dist
-        elif op2.chkpts_complete > op1.chkpts_complete:
+            op_lead = 'op1'
+            return op1
+        elif op2.position == 1:
             self.block_id = op2.cp_id
             self.op_dist = op2.dist
+            op_lead = 'op2'
+            return op2
         else:
             self.block_id = op1.cp_id
             if op1.dist > op2.dist:
@@ -350,6 +356,9 @@ class Pod(object):
                 self.op_dist = op1.dist
             else:
                 self.op_dist = op1.dist
+            op_lead = 'tie'
+            return op1
+        print('opponent_leader={}'.format(op_lead),file=sys.stderr)
 
     def loiter(self):
         x = 1
@@ -366,9 +375,20 @@ class Pod(object):
             self.update_cp_id(1)
             self.get_state()
 
+    # To activate shield:
+    #   - The op must be within a certain distance, so that the velocity along
+    #       the position vector warrants a collision
+    #   - The op's velocity vector must be pointing towards the pod to warrant
+    #       a collision
+    def shield(self,op):
+        op.update_goal(self.x,self.y)
+        op.angles()
+        if (abs(op.vel_ang) < 25) and (op.dist < 1500):
+            self.t = "SHIELD"
+            print('----SHIELD----',file=sys.stderr)
+
 
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
-#x,y,vx,vy,angle,next_check_point_id,x2,y2,vx2,vy2,angle2,next_check_point_id2
 
 # Calls the functions that take current cp_id, get checkpoint coordinates,
 # updates the goal pose with cp params and then calculates all related angles
@@ -384,13 +404,15 @@ def block(pod,op1,op2):
     #   completed_checkpoints()
     #   determine_position()
     #   set_role()
-    pod.determine_opponent_leader(op1,op2)
+    op = pod.determine_opponent_leader(op1,op2)
     pod.intercept()
-
+    print('op = {}'.format(op),file=sys.stderr)
     ### LOW LEVEL ###
     xf,yf = pod.control()
     pod.thrust()
     pod.count_turn()
+
+    pod.shield(op)
     return xf,yf
 
 def race(pod):
@@ -430,12 +452,8 @@ while True:
     op2cp = op2.completed_checkpoints()
     op1.determine_position(op2)
     op2.determine_position(op1)
-    op1cpx,op1cpy = op1.cp_params()
-    op2cpx,op2cpy = op2.cp_params()
-    op1.update_goal(op1cpx,op1cpy)
-    op2.update_goal(op2cpx,op2cpy)
-    op1.angles()
-    op2.angles()
+    op1.get_state()
+    op2.get_state()
     op1.count_turn()
     op2.count_turn()
 
@@ -454,26 +472,14 @@ while True:
     if (chkpts1 < 1) and (chkpts2 < 1):
         print("Both on chkpt 1...", file=sys.stderr)
 
-        # cpx,cpy = pod1.cp_params()
-        # pod1.update_goal(cpx,cpy)
-        # pod1.angles()
         get_state(pod1)
-
         pod1.adjust_cp()
-
-        # cpx,cpy = pod1.cp_params()
-        # pod1.update_goal(cpx,cpy)
-        # pod1.angles()
         get_state(pod1)
-
         x,y = pod1.control()
         pod1.thrust()
         pod1.boost()
         pod1.count_turn()
 
-        # cpx2,cpy2 = pod2.cp_params()
-        # pod2.update_goal(cpx2,cpy2)
-        # pod2.angles()
         get_state(pod2)
         x2,y2 = pod2.control()
         pod2.thrust()
