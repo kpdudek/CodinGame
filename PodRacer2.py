@@ -40,6 +40,7 @@ class Pod(object):
         self.nextcpy = 0 # Y coordinate of current checkpoint
 
         # Goal position
+        # Coordinates to calculate all pod related angles and distances off of
         self.goalx = 0
         self.goaly = 0
 
@@ -67,6 +68,7 @@ class Pod(object):
         self.cp_id = next_check_id # Index of current checkpoint
 
     ### LOW LEVEL ###
+    # Count the number of checkpoints completed, by checking when the id switches
     def completed_checkpoints(self):
         if self.cp_id != self.last_cp_id:
             self.chkpts_complete += 1
@@ -101,6 +103,7 @@ class Pod(object):
         return self.role
 
     ### LOW LEVEL ###
+    # Get cp coordinates off of current cp_id
     def cp_params(self):
         # Store the current checkpoint coordinates by indexing
         # into the list of every checkpoint
@@ -108,11 +111,16 @@ class Pod(object):
         return self.nextcpx, self.nextcpy
 
     ### LOW LEVEL ###
+    # Sets goal coordinates, from values passed
     def update_goal(self,x,y):
         self.goalx = x
         self.goaly = y
 
     ### LOW LEVEL ###
+    # Calculates values that are based on the goal pose:
+    #   distance to goal
+    #   vel angle off goal
+
     def angles(self):
         # Radian values for convenience
         pi = math.pi
@@ -286,6 +294,9 @@ class Pod(object):
         # Count what turn it is
         self.turn_num += 1
 
+    # Adjusts the cp_id based on inputed val
+    # Val can be positive or negative
+    # Function accounts for roll over
     def update_cp_id(self,val):
         l = len(chk_pts)-1
         newcp = (self.cp_id+val)
@@ -298,6 +309,8 @@ class Pod(object):
         else:
             self.cp_id = newcp
 
+    # Function calls methods that get cp_params, update goal,
+    # and calcualte angles
     def get_state(self):
         x,y = self.cp_params()
         self.update_goal(x,y)
@@ -364,6 +377,8 @@ class Pod(object):
         x = 1
         # wait for race pod to be losing
 
+    # If blocker pod will beat leading opponent to the checkpoint, do so
+    # If opponenet is closer to cp than blocker, advance to next cp
     def intercept(self):
         self.cp_id = self.block_id
         self.get_state()
