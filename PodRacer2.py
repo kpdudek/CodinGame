@@ -395,10 +395,12 @@ class Pod(object):
     #       the position vector warrants a collision
     #   - The op's velocity vector must be pointing towards the pod to warrant
     #       a collision
-    def shield(self,op):
-        op.update_goal(self.x,self.y)
-        op.angles()
-        if (abs(op.vel_ang) < 25) and (op.dist < 1500):
+    def shield(self,op1,op2):
+        op1.update_goal(self.x,self.y)
+        op1.angles()
+        op2.update_goal(self.x,self.y)
+        op2.angles()
+        if ((abs(op1.vel_ang) < 25) and (op1.dist < 1500)) or ((abs(op2.vel_ang) < 25) and (op2.dist < 1500)):
             self.t = "SHIELD"
             print('----SHIELD----',file=sys.stderr)
 
@@ -427,10 +429,10 @@ def block(pod,op1,op2):
     pod.thrust()
     pod.count_turn()
 
-    pod.shield(op)
+    pod.shield(op1,op2)
     return xf,yf
 
-def race(pod):
+def race(pod,op1,op2):
     #This function is prefixed by the function calls:
     #   prep()
     #   completed_checkpoints()
@@ -444,6 +446,7 @@ def race(pod):
     xf,yf = pod.control()
     pod.thrust()
     pod.count_turn()
+    #pod.shield(op1,op2)
     return xf,yf
 
 
@@ -461,8 +464,8 @@ while True:
     o2_x, o2_y, o2_vx, o2_vy, o2_angle, o2_next_check_point_id = [int(j) for j in input().split()]
 
     # Initialize the opponents
-    op1.prep(x,y,vx,vy,angle,next_check_point_id)
-    op2.prep(x2,y2,vx2,vy2,angle2,next_check_point_id2)
+    op1.prep(o_x,o_y,o_vx,o_vy,o_angle,o_next_check_point_id)
+    op2.prep(o2_x,o2_y,o2_vx,o2_vy,o2_angle,o2_next_check_point_id)
     op1cp = op1.completed_checkpoints()
     op2cp = op2.completed_checkpoints()
     op1.determine_position(op2)
@@ -510,11 +513,11 @@ while True:
         print("pod1 = {}\npod2 = {}".format(role1,role2), file=sys.stderr)
 
         if role1 == "race":
-            x,y = race(pod1)
+            x,y = race(pod1,op1,op2)
             x2,y2 = block(pod2,op1,op2)
         else:
             x,y = block(pod1,op1,op2)
-            x2,y2 = race(pod2)
+            x2,y2 = race(pod2,op1,op2)
 
     # Target Coordinates and thrust values of the pods
     print(str(x),str(y),pod1.t)
