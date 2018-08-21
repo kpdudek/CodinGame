@@ -54,6 +54,9 @@ class Pod(object):
         self.goal_ang = 0 # Global angle of goal pose vector
         self.vel_ang = 0 # Global angle of velocity vector
 
+        # SHIELD
+        self.past_turns = ['','','','']
+
     '''
     LOW LEVEL :: METHODS
     '''
@@ -191,6 +194,7 @@ class Pod(object):
             self.vel_ang = pi - theta
         else:
             print("You missed a condition in the Global Velocity, Pod.Angles()",file=sys.stderr)
+            self.vel_ang = 0
 
         # Print the result of angles()
         #print("vel_angle={},goal_ang={},ang={},x_vel={},y_vel={},xer={},yer={}".format(math.degrees(self.vel_ang),math.degrees(self.goal_ang),self.ang,self.x_vel,self.y_vel,self.xerror,self.yerror) ,file=sys.stderr)
@@ -215,6 +219,8 @@ class Pod(object):
             ang = (tpi + self.delta_theta)
         else:
             ang = self.delta_theta
+
+        ang = ang * 1.3
         # Limit the rotation to 18 degrees
         if ang > eightn:
             ang = eightn
@@ -335,7 +341,7 @@ class Pod(object):
 
         l = len(chk_pts)-1 # Number of checkpoints
         # If the pod will pass though the checkpoint, switch to the next checkpoint
-        if (self.dist < 1500) and (abs(self.vel_ang) < 25) and (self.velocity > 225):
+        if (self.dist < 1750) and (abs(self.vel_ang) < 25) and (self.velocity > 200):
             #print("Switching to next CP...",file=sys.stderr)
             if self.cp_id == l: # if the current checkpoint is the last in the list, target index 0
                 self.cp_id = 0
@@ -400,9 +406,15 @@ class Pod(object):
         op1.angles()
         op2.update_goal(self.x,self.y)
         op2.angles()
-        if ((abs(op1.vel_ang) < 25) and (op1.dist < 1500)) or ((abs(op2.vel_ang) < 25) and (op2.dist < 1500)):
-            self.t = "SHIELD"
-            print('----SHIELD----',file=sys.stderr)
+        if "SHIELD" in self.past_turns:
+            del self.past_turns[-1]
+            self.past_turns.insert(0,'')
+        else:
+            if ((abs(op1.vel_ang) < 25) and (op1.dist < 1500)) or ((abs(op2.vel_ang) < 25) and (op2.dist < 1500)):
+                self.t = "SHIELD"
+                print('----SHIELD----',file=sys.stderr)
+                self.past_turns[-1]
+                self.past_turns.insert(0,"SHIELD")
 
 
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
