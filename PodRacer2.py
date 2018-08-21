@@ -323,7 +323,6 @@ class Pod(object):
         self.angles()
         return x,y
 
-
     '''
     ROLE --> RACE :: METHODS
     '''
@@ -349,6 +348,25 @@ class Pod(object):
             else: # Target index += 1
                 self.cp_id += 1
                 self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
+
+    def race_shield(self,op1,op2):
+        op1.update_goal(self.x,self.y)
+        op1.angles()
+        op2.update_goal(self.x,self.y)
+        op2.angles()
+
+        pos_1 = check_race_standing(self,op1)
+        pos_2 = check_race_standing(self,op2)
+
+        if "SHIELD" in self.past_turns:
+            del self.past_turns[-1]
+            self.past_turns.insert(0,'')
+        else:
+            if ((abs(op1.vel_ang) < 25) and (op1.dist < 1500)) or ((abs(op2.vel_ang) < 25) and (op2.dist < 1500)):
+                self.t = "SHIELD"
+                print('----SHIELD----',file=sys.stderr)
+                self.past_turns[-1]
+                self.past_turns.insert(0,"SHIELD")
 
 
     '''
@@ -461,6 +479,19 @@ def race(pod,op1,op2):
     #pod.shield(op1,op2)
     return xf,yf
 
+
+def check_race_standing(pod,op):
+    if pod.chkpts_complete > op.chkpts_complete:
+        return 1
+    elif pod.chkpts_complete < op.chkpts_complete:
+        return 2
+    elif pod.chkpts_complete == op.chkpts_complete:
+        if pod.dist > op.dist:
+            return 2
+        elif pod.dist < op.dist:
+            return 1
+        elif pod.dist == op.dist:
+            return 1
 
 ######################   -  POD INITIALIZATION   -  ######################
 pod1 = Pod()
