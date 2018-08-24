@@ -435,6 +435,19 @@ class Pod(object):
                 self.past_turns.insert(0,"SHIELD")
 
 
+######################   -  INHERITENCE   -  ######################
+
+class Race(Pod):
+    def __init__(self,): #parameters pass parameters needed to calculate race move
+        super().__init__()
+
+
+
+class Block(Pod):
+    def __init__(self,):
+        super().__init__()
+        
+
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
 
 # Calls the functions that take current cp_id, get checkpoint coordinates,
