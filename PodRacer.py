@@ -446,7 +446,7 @@ class Race(Pod):
 class Block(Pod):
     def __init__(self,):
         super().__init__()
-        
+
 
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
 
