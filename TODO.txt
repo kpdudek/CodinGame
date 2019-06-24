@@ -1,0 +1,2 @@
+Make past turns a class or list 
+    [0,0,0] not ''
