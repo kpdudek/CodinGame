@@ -1,10 +1,9 @@
 import sys
 import math
-import numpy
+import numpy as np
 
 # Auto-generated code below aims at helping you parse
 # the standard input according to the problem statement.
-
 surface_n = int(input())  # the number of points used to draw the surface of Mars.
 land_x = []
 land_y = []
@@ -48,30 +47,33 @@ class Mars(object):
         for iLand in range(0,N-2):
             width = xLand[iLand+1]-xLand[iLand]
             if yLand[iLand] == yLand[iLand+1] and width > 1000:
-                self.Target = [math.ceil(width/2),yLand[iLand]]
+                self.Target = [xLand[iLand]+math.ceil(width/2),yLand[iLand]]
                 return
     
     def EuclidianDistance(self,x,y):
-        # print(x, file=sys.stderr)
-        # print(y, file=sys.stderr)
         dist = math.sqrt(math.pow(x[0]-y[0],2) + math.pow(x[1]-y[1],2))
         self.dist = dist
-        print(dist, file=sys.stderr)
+        print("Dist: {}".format(dist), file=sys.stderr)
 
 
     def setDesiredVelocity(self,kVel):
         self.EuclidianDistance([self.x,self.y],self.Target)
         
-        Vdesired = -math.pow(self.dist*.002,2) - 10
-        print(Vdesired, file=sys.stderr)
-        if Vdesired > -10:
-            Vdesired = -10
-        elif Vdesired < -50:
-            Vdesired = -50 
+        errorX = self.Target[0]-self.x
+        if abs(self.dist) > 1500:
+            Vdesired = -15
+        else:
+            Vdesired = -math.pow(self.dist*kVel,2) - 10
+            # print("Vel desired: {}".format(Vdesired), file=sys.stderr)
+            if Vdesired > -10:
+                Vdesired = -10
+            elif Vdesired < -50:
+                Vdesired = -50 
 
         self.Vdesired = Vdesired
 
     def setPower(self,kp):
+        print("Vel desired: {} V_speed: {}".format(self.Vdesired,self.v_speed), file=sys.stderr)
         error =self.Vdesired - self.v_speed
         power = (kp * error)
 
@@ -83,12 +85,58 @@ class Mars(object):
 
         rover.power = power
     
+    def setAngle(self,kt):
+        maxRotate = 22
+        absErrorY = abs(self.Target[1] - self.y)
+
+        ### Position control
+        errorX = self.Target[0] - self.x
+        thetaX = -kt * errorX
+        print(thetaX,file=sys.stderr)
+        thetaX = round(thetaX)
+        if thetaX > maxRotate:
+            thetaX = maxRotate
+        elif thetaX < -maxRotate:
+            thetaX = -maxRotate
+        if absErrorY < 300:
+            thetaX = 0
+
+        ### Velocity control
+        maxVel = 18
+        # Velocity is positive if you're on left
+        #             negative if you're on right
+        setVel = maxVel * np.sign(self.Target[0]-self.x)
+        errorV = setVel - self.h_speed
+        thetaV = -1 * errorV
+        thetaV = round(thetaV)
+        if thetaV > maxRotate:
+            thetaV = maxRotate
+        elif thetaV < -maxRotate:
+            thetaV = -maxRotate
+        if absErrorY < 300:
+            thetaV = 0
+
+        # Decide which angle to use
+        if abs(self.h_speed) > maxVel:
+            self.rotate = thetaV
+        else:
+            self.rotate = thetaX
+        
+        if self.v_speed > -40 and absErrorY < 300:
+            self.rotate = 0
+
+        # self.rotate = thetaX + thetaV
+        print("Angle X: {} Angle V: {}".format(thetaX,thetaV), file=sys.stderr)
+        print("Angle: {}".format(self.rotate), file=sys.stderr)
+    
 
 # INITIALIZE PARAMETERS
 rover = Mars()
-kp = 1.6
-kVel = -1
+kp = 15
+kVel = .002
+kt = .3
 rover.FindLandingSite(surface_n,land_x,land_y)
+print("Target X: {} Target Y: {}".format(rover.Target[0],rover.Target[1]), file=sys.stderr)
 
 # GAME LOOP
 while True:
@@ -99,12 +147,19 @@ while True:
     # power: the thrust power (0 to 4).
     # Write an action using print
     # To debug: print("Debug messages...", file=sys.stderr)
-    
     x,y,h_speed,v_speed,fuel,rotate,power = [int(i) for i in input().split()]
+    
+    # Update class members
     rover.update(x,y,h_speed,v_speed,fuel,rotate,power)
     
+    # Determine what velocity is required
     rover.setDesiredVelocity(kVel)
+
+    # Calculate thrust
     rover.setPower(kp)
 
+    # Calculate angle
+    rover.setAngle(kt)
+
     # 2 integers: rotate power. rotate is the desired rotation angle (should be 0 for level 1), power is the desired thrust power (0 to 4).
-    print(0,rover.power)
+    print(int(rover.rotate),rover.power)
