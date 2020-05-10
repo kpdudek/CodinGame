@@ -3,6 +3,8 @@ import sys
 import math
 from math import sqrt
 from math import acos
+import time
+import numpy
 # To debug: print("Debug messages...", file=sys.stderr)
 
 # Store the number of laps in the race and the check point locations
@@ -28,7 +30,7 @@ class Pod(object):
         self.y_vel = 0 # Velocity in the y direction
         self.ang = 0 # Orientation of the pod
         self.cp_id = 0 # Current checkpoint index
-        self.last_cp_id = -1 # Store the checkpoint id from the last turn
+        self.last_cp_id = 1 # Store the checkpoint id from the last turn
 
         # Race Standing Values
         self.turn_num = 0 # Current turn number
@@ -57,9 +59,9 @@ class Pod(object):
         # SHIELD
         self.past_turns = ['','','','']
 
-    '''''''''''''''''''''
+    '''
     LOW LEVEL :: METHODS
-    '''''''''''''''''''''
+    '''
     ### LOW LEVEL ###
     def prep(self,xpose,ypose,x_v,y_v,ang,next_check_id):
         # Store the turn by turn values into respective class properties
@@ -323,9 +325,10 @@ class Pod(object):
         self.angles()
         return x,y
 
-    '''''''''''''''''''''''''''
-    ROLE --> RACE | METHODS
-    '''''''''''''''''''''''''''
+
+    '''
+    ROLE --> RACE :: METHODS
+    '''
     ### RACE ###
     # Decide to set the boost flag
     def boost(self):
@@ -349,29 +352,10 @@ class Pod(object):
                 self.cp_id += 1
                 self.prep(self.x,self.y,self.x_vel,self.y_vel,self.ang,self.cp_id)
 
-    def race_shield(self,op1,op2):
-        op1.update_goal(self.x,self.y)
-        op1.angles()
-        op2.update_goal(self.x,self.y)
-        op2.angles()
 
-        pos_1 = check_race_standing(self,op1)
-        pos_2 = check_race_standing(self,op2)
-
-        if "SHIELD" in self.past_turns:
-            del self.past_turns[-1]
-            self.past_turns.insert(0,'')
-        else:
-            if ((abs(op1.vel_ang) < 25) and (op1.dist < 1500)) or ((abs(op2.vel_ang) < 25) and (op2.dist < 1500)):
-                self.t = "SHIELD"
-                print('----SHIELD----',file=sys.stderr)
-                self.past_turns[-1]
-                self.past_turns.insert(0,"SHIELD")
-
-
-    '''''''''''''''''''''''''''
-    ROLE --> BLOCK | METHODS
-    '''''''''''''''''''''''''''
+    '''
+    ROLE --> BLOCK :: METHODS
+    '''
     # This function takes the given opponent handles and determines their positions
     def determine_opponent_leader(self,op1,op2):
         # This function
@@ -435,19 +419,6 @@ class Pod(object):
                 self.past_turns.insert(0,"SHIELD")
 
 
-######################   -  INHERITENCE   -  ######################
-
-# class Race(Pod):
-#     def __init__(self,): #parameters pass parameters needed to calculate race move
-#         super().__init__()
-
-
-
-# class Block(Pod):
-#     def __init__(self,):
-#         super().__init__()
-
-
 ######################   -  GAME LOOP FUNCTIONS   -  ######################
 
 # Calls the functions that take current cp_id, get checkpoint coordinates,
@@ -470,6 +441,7 @@ def block(pod,op1,op2):
     ### LOW LEVEL ###
     xf,yf = pod.control()
     pod.thrust()
+    pod.count_turn()
 
     pod.shield(op1,op2)
     return xf,yf
@@ -487,22 +459,10 @@ def race(pod,op1,op2):
     ### LOW LEVEL ###
     xf,yf = pod.control()
     pod.thrust()
+    pod.count_turn()
     #pod.shield(op1,op2)
     return xf,yf
 
-
-def check_race_standing(pod,op):
-    if pod.chkpts_complete > op.chkpts_complete:
-        return 1
-    elif pod.chkpts_complete < op.chkpts_complete:
-        return 2
-    elif pod.chkpts_complete == op.chkpts_complete:
-        if pod.dist > op.dist:
-            return 2
-        elif pod.dist < op.dist:
-            return 1
-        elif pod.dist == op.dist:
-            return 1
 
 ######################   -  POD INITIALIZATION   -  ######################
 pod1 = Pod()
@@ -526,6 +486,8 @@ while True:
     op2.determine_position(op1)
     op1.get_state()
     op2.get_state()
+    op1.count_turn()
+    op2.count_turn()
 
     # Pass turn into to the pods and determine how many checkpoints have
     # been completed
@@ -535,8 +497,6 @@ while True:
     chkpts2 = pod2.completed_checkpoints()
     pod1.determine_position(pod2)
     pod2.determine_position(pod1)
-    pod1.get_state()
-    pod2.get_state()
 
     print("chkpts1 = {}, chkpts2 = {}".format(chkpts1,chkpts2), file=sys.stderr)
 
@@ -550,11 +510,12 @@ while True:
         x,y = pod1.control()
         pod1.thrust()
         pod1.boost()
+        pod1.count_turn()
 
         get_state(pod2)
         x2,y2 = pod2.control()
         pod2.thrust()
-  
+        pod2.count_turn()
 
     # Now determine block or race: based on which pod is the leader
     # TODO(add some logic so that the pods dont get stuck flipping states)
@@ -571,12 +532,6 @@ while True:
         else:
             x,y = block(pod1,op1,op2)
             x2,y2 = race(pod2,op1,op2)
-
-    op1.count_turn()
-    op2.count_turn()
-
-    pod1.count_turn()
-    pod2.count_turn()
 
     # Target Coordinates and thrust values of the pods
     print(str(x),str(y),pod1.t)
